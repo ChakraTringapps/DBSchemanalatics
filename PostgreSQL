@@ -1,0 +1,114 @@
+using System;
+using System.Data;
+using Npgsql;
+
+namespace DBSchemaAnalysis
+{
+    internal class PostgreSQL : DBOperation
+    {
+        private readonly IDatabaseConnectionFactory factory;
+
+        public PostgreSQL(IDatabaseConnectionFactory factory) : base(factory)
+        {
+            this.factory = factory;
+        }
+
+        public override int GetCount(string connectionString, string query)
+        {
+            int data = 0;
+
+            using (var connection = (NpgsqlConnection)factory.CreateConnection(connectionString))
+            {
+                connection.Open();
+
+                using (var command = new NpgsqlCommand(query, connection))
+                {
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            data = reader.GetInt32(0);
+                        }
+                    }
+                }
+
+                connection.Close();
+
+                return data;
+            }
+        }
+
+        public override string? GetDatabaseCompatibilityLevel(string connectionString)
+        {
+            using (var connection = (NpgsqlConnection)factory.CreateConnection(connectionString))
+            {
+                connection.Open();
+                using (var command = new NpgsqlCommand("SHOW server_version_num", connection))
+                {
+                    return command.ExecuteScalar()?.ToString();
+                }
+            }
+        }
+
+        public override long GetDatabaseSize(string connectionString)
+        {
+            long size = 0;
+
+            using (var connection = (NpgsqlConnection)factory.CreateConnection(connectionString))
+            {
+                connection.Open();
+
+                using (var command = new NpgsqlCommand("SELECT pg_database_size(current_database())", connection))
+                {
+                    size = (long)command.ExecuteScalar();
+                }
+
+                connection.Close();
+
+                return size;
+            }
+        }
+
+        public override DataTable? GetDistinctDataTypes(string connectionString)
+        {
+            using (var connection = (NpgsqlConnection)factory.CreateConnection(connectionString))
+            {
+                connection.Open();
+                DataTable dataTypes = new DataTable();
+                using (var command = new NpgsqlCommand("SELECT DISTINCT data_type FROM information_schema.columns", connection))
+                using (var adapter = new NpgsqlDataAdapter(command))
+                {
+                    adapter.Fill(dataTypes);
+                }
+                connection.Close();
+                return dataTypes;
+            }
+        }
+
+        // Implement other methods for PostgreSQL
+
+        public override DataTable GetPerformanceMetrics(string connectionString)
+        {
+            // Implement your logic here or return an empty DataTable
+            return new DataTable();
+        }
+
+        public override DataTable GetLinkedServers(string connectionString)
+        {
+            // Implement your logic here or return an empty DataTable
+            return new DataTable();
+        }
+
+        public override DataTable GetIndexDetails(string connectionString)
+        {
+            // Implement your logic here or return an empty DataTable
+            return new DataTable();
+        }
+
+        public override DataTable GetUserDefinedDataTypes(string connectionString)
+        {
+            // Implement your logic here or return an empty DataTable
+            return new DataTable();
+        }
+    }
+}
